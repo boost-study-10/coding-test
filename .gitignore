@@ -1,0 +1,9 @@
+/temp
+/tmp
+.DS_Store
+.env.local
+.env.development
+.env.production
+logs
+*.log
+.vscode/*
