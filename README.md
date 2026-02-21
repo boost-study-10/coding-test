@@ -55,16 +55,30 @@
 * 매주 반복되는 폴더/파일 생성 작업 제거
 * 정해진 템플릿으로 **기록 품질 통일**
 
+### 초기 설정 (최초 1회)
+
+```bash
+chmod +x ./create ./scripts/create.sh
+```
+
+원하면 `create`를 alias로 등록해서 어디서든 사용할 수 있다.
+
+```bash
+echo "alias create='$(pwd)/create'" >> ~/.bashrc
+source ~/.bashrc
+```
+
 ### 사용 방법
 
 ```bash
-create {이름} {주차} {플랫폼} {문제번호}
+./create {이름} {주차} {플랫폼} {문제번호}
 ```
 
 #### 예시
 
 ```bash
-create chaewon week03 BOJ 2557
+./create chaewon week03 BOJ 2557
+./create chaewon 3 PGS "두 수의 합"
 ```
 
 #### 실행 결과
@@ -75,7 +89,7 @@ chaewon/
     └─ BOJ_2557.md
 ```
 
-> alias가 동작하지 않는 경우
+> `week`는 `week03` 또는 `3`처럼 입력 가능
 
 ```bash
 ./scripts/create.sh {이름} {주차} {플랫폼} {문제번호}
@@ -90,8 +104,14 @@ chaewon/
 ```md
 ### 📖 풀이한 문제
 - 백준 2557 - Hello World
+- 문제 링크: https://www.acmicpc.net/problem/2557
 - 난이도: 브론즈 5
 - 걸린 시간: 1분 (optional)
+
+### 🧩 풀이 설계 / 막힌 부분
+- 처음 접근 아이디어: 문자열을 그대로 출력
+- 고려한 시간복잡도: O(1)
+- 막힌 부분 / 해결 방법: 없음
 
 ### ⭐️ 문제에서 주로 사용한 알고리즘
 - 출력 / 구현
