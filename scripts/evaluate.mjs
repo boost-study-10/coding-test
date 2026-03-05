@@ -41,6 +41,8 @@ const GLOB_RULES = {
   KEEP_ORIGINAL: '\\$&',
   ANY_CHARS: '.*',
 };
+/** * 치환 전 임시 플레이스홀더 (이스케이프 후 .* 로 복원) */
+const WILDCARD_PLACEHOLDER = '\u0000';
 
 /** git log 실행 및 출력 파싱에 사용하는 설정 */
 const GIT_CONFIG = {
@@ -277,18 +279,16 @@ function executeGitLog(since, until) {
 function parseGitOutput(output) {
   const entries = [];
   let lastSeenDate = null;
-  const blocks = output.split('\0').filter(Boolean);
+  /** -z 사용 시 NUL로 구분된 청크: 날짜 | "\\nA" | 경로 가 반복됨 */
+  const chunks = output.split('\0').map((s) => s.trim()).filter(Boolean);
 
-  for (const block of blocks) {
-    const trimmedBlock = block.trim();
-    if (GIT_CONFIG.DATE_REGEX.test(trimmedBlock)) {
-      lastSeenDate = trimmedBlock.slice(0, 10);
+  for (const chunk of chunks) {
+    if (GIT_CONFIG.DATE_REGEX.test(chunk)) {
+      lastSeenDate = chunk.slice(0, 10);
       continue;
     }
-
-    const [status, path] = trimmedBlock.split('\t');
-    if (status === GIT_CONFIG.ADDED_STATUS && path?.endsWith('.md')) {
-      entries.push({ path: path.trim(), date: lastSeenDate });
+    if (chunk.includes('/') && chunk.endsWith('.md')) {
+      entries.push({ path: chunk, date: lastSeenDate });
     }
   }
 
@@ -301,9 +301,10 @@ function parseGitOutput(output) {
  * @returns {RegExp}
  */
 function patternToRegex(glob) {
-  const escaped = glob
+  const withPlaceholder = glob.replace(GLOB_RULES.WILDCARD_TO_ANY, WILDCARD_PLACEHOLDER);
+  const escaped = withPlaceholder
     .replace(GLOB_RULES.ESCAPE_SPECIAL_CHARS, GLOB_RULES.KEEP_ORIGINAL)
-    .replace(GLOB_RULES.WILDCARD_TO_ANY, GLOB_RULES.ANY_CHARS);
+    .replace(new RegExp(WILDCARD_PLACEHOLDER, 'g'), GLOB_RULES.ANY_CHARS);
   return new RegExp(`^${escaped}$`);
 }
 
