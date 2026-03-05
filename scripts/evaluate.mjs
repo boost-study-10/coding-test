@@ -67,8 +67,10 @@ function main() {
   const rules = loadRules();
   const { since, until } = getLastWeekRange();
   const entries = getFilesAddedInLastWeek(since, until);
-  const result = aggregate(entries, rules);
+  const aggregated = aggregate(entries, rules);
+  const { pass, fail } = evaluatePassFail(aggregated, rules.members);
 
+  const result = { ...aggregated, pass, fail };
   console.log(JSON.stringify(result, null, 2));
 }
 
@@ -280,7 +282,10 @@ function parseGitOutput(output) {
   const entries = [];
   let lastSeenDate = null;
   /** -z 사용 시 NUL로 구분된 청크: 날짜 | "\\nA" | 경로 가 반복됨 */
-  const chunks = output.split('\0').map((s) => s.trim()).filter(Boolean);
+  const chunks = output
+    .split('\0')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   for (const chunk of chunks) {
     if (GIT_CONFIG.DATE_REGEX.test(chunk)) {
@@ -301,7 +306,10 @@ function parseGitOutput(output) {
  * @returns {RegExp}
  */
 function patternToRegex(glob) {
-  const withPlaceholder = glob.replace(GLOB_RULES.WILDCARD_TO_ANY, WILDCARD_PLACEHOLDER);
+  const withPlaceholder = glob.replace(
+    GLOB_RULES.WILDCARD_TO_ANY,
+    WILDCARD_PLACEHOLDER,
+  );
   const escaped = withPlaceholder
     .replace(GLOB_RULES.ESCAPE_SPECIAL_CHARS, GLOB_RULES.KEEP_ORIGINAL)
     .replace(new RegExp(WILDCARD_PLACEHOLDER, 'g'), GLOB_RULES.ANY_CHARS);
@@ -375,4 +383,38 @@ function formatFinalResult(memberNames, storage) {
     result.days[name] = data.dates.size;
   });
   return result;
+}
+
+/**
+ * 집계 결과와 rules.members를 비교해 목표 달성(pass) / 미달(fail) 목록을 반환합니다.
+ * - weekly_count: counts[멤버] >= target 이면 pass
+ * - weekly_days, daily: days[멤버] >= target 이면 pass
+ * @param {{ counts: Object<string, number>, days: Object<string, number> }} aggregated - aggregate() 결과
+ * @param {Object} members - rules.members
+ * @returns {{ pass: string[], fail: string[] }}
+ */
+function evaluatePassFail(aggregated, members) {
+  const pass = [];
+  const fail = [];
+
+  for (const [name, config] of Object.entries(members)) {
+    if (config.active === false) continue;
+
+    const target = config.target;
+    if (target == null || typeof target !== 'number') continue;
+
+    const type = config.type || 'weekly_count';
+    const value =
+      type === 'weekly_count'
+        ? (aggregated.counts[name] ?? 0)
+        : (aggregated.days[name] ?? 0);
+
+    if (value >= target) {
+      pass.push(name);
+    } else {
+      fail.push(name);
+    }
+  }
+
+  return { pass, fail };
 }
