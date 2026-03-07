@@ -40,12 +40,22 @@ const input = fs
   .split("\n");
 
 const [r, c] = input[0].split(" ").map(Number);
+
 const board = [];
 for (let i = 1; i <= r; i++) {
   board.push(input[i].split(""));
 }
 
-function dfs(i, j, stack, r, c, board) {
+// 알파벳 -> 인덱스 map
+const map = {};
+for (let i = 0; i < 26; i++) {
+  map[String.fromCharCode(65 + i)] = i;
+}
+
+// 방문 배열
+const visited = new Array(26).fill(false);
+
+function dfs(i, j) {
   const dirs = [
     [0, 1],
     [0, -1],
@@ -53,29 +63,33 @@ function dfs(i, j, stack, r, c, board) {
     [-1, 0],
   ];
 
-  result = stack.size;
+  let result = 1;
 
   for (const [di, dj] of dirs) {
-    const ni = i + di,
-      nj = j + dj;
+    const ni = i + di;
+    const nj = j + dj;
 
-    if (0 > ni || ni >= r || nj < 0 || nj >= c) continue;
-    if (stack.has(board[ni][nj])) continue;
+    if (ni < 0 || ni >= r || nj < 0 || nj >= c) continue;
 
-    stack.add(board[ni][nj]);
-    result = Math.max(result, dfs(ni, nj, stack, r, c, board));
-    stack.delete(board[ni][nj]);
+    const idx = map[board[ni][nj]];
+
+    if (visited[idx]) continue;
+
+    visited[idx] = true;
+    result = Math.max(result, dfs(ni, nj) + 1);
+    visited[idx] = false; // 백트래킹
   }
 
   return result;
 }
 
-function solution(r, c, board) {
-  const stack = new Set();
-  stack.add(board[0][0]);
-  return dfs(0, 0, stack, r, c, board);
+function solution() {
+  const startIdx = map[board[0][0]];
+  visited[startIdx] = true;
+
+  return dfs(0, 0);
 }
 
-console.log(solution(r, c, board));
+console.log(solution());
 
 ```
