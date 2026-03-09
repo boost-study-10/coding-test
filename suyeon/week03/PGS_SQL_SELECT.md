@@ -1,0 +1,43 @@
+### 📖 풀이한 문제
+- 프로그래머스 SQL_SELECT
+- 문제 링크: https://school.programmers.co.kr/learn/courses/30/parts/17042
+
+### 아픈 동물 찾기
+```sql
+SELECT ANIMAL_ID, NAME FROM ANIMAL_INS
+WHERE INTAKE_CONDITION = 'Sick'
+ORDER BY ANIMAL_ID;
+```
+
+### 어린 동물 찾기
+```sql
+SELECT ANIMAL_ID, NAME FROM ANIMAL_INS
+WHERE INTAKE_CONDITION != 'Aged'
+ORDER BY ANIMAL_ID;
+```
+
+### 동물의 아이디와 이름
+```sql
+SELECT ANIMAL_ID, NAME FROM ANIMAL_INS
+ORDER BY ANIMAL_ID;
+```
+
+### 여러 기준으로 정렬하기
+```sql
+SELECT ANIMAL_ID, NAME, DATETIME FROM ANIMAL_INS
+ORDER BY NAME, DATETIME DESC;
+```
+
+### 상위 n개 레코드
+```sql
+SELECT NAME FROM ANIMAL_INS
+ORDER BY DATETIME
+LIMIT 1;
+```
+
+### 조건에 맞는 회원수 구하기
+```sql
+SELECT COUNT(USER_ID) AS USERS FROM USER_INFO
+WHERE AGE >= 20 AND AGE <= 29
+AND YEAR(JOINED) = 2021;
+```
