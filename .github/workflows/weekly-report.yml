@@ -45,6 +45,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add leaderboard.md reports/history.json
+          git add -f leaderboard.md reports/history.json
           git diff --staged --quiet || git commit -m "chore: update leaderboard and history [skip ci]"
           git push
