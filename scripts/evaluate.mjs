@@ -61,6 +61,10 @@ const LEADERBOARD_RECENT_WEEKS = 10;
 /** 미달 1주당 벌금 (원) */
 const PENALTY_PER_FAIL_WON = 2000;
 
+/** Discord 메시지에 넣는 사용 가이드(Wiki) 링크 */
+const WIKI_USAGE_GUIDE_URL =
+  'https://github.com/boost-study-10/coding-test/wiki/스터디-자동-집계-시스템-사용-가이드';
+
 /**
  * 스크립트 실행 흐름
  *   1. 규칙 로드
@@ -466,11 +470,12 @@ function evaluatePassFail(aggregated, members) {
  * @returns {string}
  */
 function buildDiscordMessage(result, members, weekRange) {
-  const lines = ['📌 코딩테스트 스터디 주간 결과', ''];
+  const lines = ['📌 주간 코딩테스트 자동 집계 결과 (Beta)', ''];
 
   if (weekRange) {
     lines.push(`${weekRange.weekStart} ~ ${weekRange.weekEnd}`, '');
   }
+  lines.push(`[👉️ 사용 가이드 바로가기](${WIKI_USAGE_GUIDE_URL})`, '');
 
   const formatLine = (name) => {
     const config = members[name];
@@ -483,7 +488,7 @@ function buildDiscordMessage(result, members, weekRange) {
     return `- ${name} (${value}/${target})`;
   };
 
-  lines.push('✅ 통과');
+  lines.push('[통과]');
   if (result.pass.length === 0) {
     lines.push('- (없음)');
   } else {
@@ -491,7 +496,7 @@ function buildDiscordMessage(result, members, weekRange) {
   }
   lines.push('');
 
-  lines.push('❌ 벌칙');
+  lines.push('[벌칙]');
   if (result.fail.length === 0) {
     lines.push('- (없음)');
   } else {
@@ -500,12 +505,18 @@ function buildDiscordMessage(result, members, weekRange) {
   lines.push('');
 
   const totalCount = Object.values(result.counts).reduce((a, b) => a + b, 0);
-  lines.push('📑 합계');
+  lines.push('[합계]');
   lines.push(`총 풀이: ${totalCount}문제`);
 
   if (weekRange?.leaderboardUrl) {
-    lines.push('', `📊 [누적 현황 보기](${weekRange.leaderboardUrl})`);
+    lines.push('', `[👉️ 누적 현황 바로가기](${weekRange.leaderboardUrl})`);
   }
+
+  lines.push(
+    '',
+    '※ 현재 1주일간 베타 테스트 기간입니다.',
+    '문제나 개선 사항이 있으면 자유롭게 공유해주세요.',
+  );
 
   return lines.join('\n');
 }
@@ -609,7 +620,8 @@ function buildLeaderboardMarkdown(history, memberStats) {
   lines.push('| --- | ---: | ---: |');
   for (const name of sortedMembers) {
     const s = memberStats[name] || { failCount: 0, penaltyTotal: 0 };
-    const penaltyStr = s.penaltyTotal > 0 ? `${s.penaltyTotal.toLocaleString()}원` : '0원';
+    const penaltyStr =
+      s.penaltyTotal > 0 ? `${s.penaltyTotal.toLocaleString()}원` : '0원';
     lines.push(`| ${name} | ${s.failCount} | ${penaltyStr} |`);
   }
   lines.push('');
