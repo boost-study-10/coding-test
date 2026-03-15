@@ -11,7 +11,7 @@
  * // => { "counts": { "ahyeon": 3, ... }, "days": { "ahyeon": 2, ... } }
  */
 
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -72,6 +72,15 @@ function main() {
 
   const result = { ...aggregated, pass, fail };
   console.log(JSON.stringify(result, null, 2));
+
+  const payload = buildDiscordPayload(result, rules.members);
+  const reportsDir = join(REPO_ROOT, 'reports');
+  mkdirSync(reportsDir, { recursive: true });
+  writeFileSync(
+    join(reportsDir, 'discord-payload.json'),
+    JSON.stringify(payload, null, 2),
+    'utf8',
+  );
 }
 
 main();
@@ -417,4 +426,59 @@ function evaluatePassFail(aggregated, members) {
   }
 
   return { pass, fail };
+}
+
+/**
+ * 집계·판정 결과와 members 설정으로 Discord 메시지 본문을 만듭니다.
+ * @param {{ counts: Object, days: Object, pass: string[], fail: string[] }} result - main에서 만든 최종 결과
+ * @param {Object} members - rules.members
+ * @returns {string}
+ */
+function buildDiscordMessage(result, members) {
+  const lines = ['📌 코딩테스트 스터디 주간 결과', ''];
+
+  const formatLine = (name) => {
+    const config = members[name];
+    const target = config?.target ?? 0;
+    const type = config?.type || 'weekly_count';
+    const value =
+      type === 'weekly_count'
+        ? (result.counts[name] ?? 0)
+        : (result.days[name] ?? 0);
+    return `- ${name} (${value}/${target})`;
+  };
+
+  lines.push('✅ 통과');
+  if (result.pass.length === 0) {
+    lines.push('- (없음)');
+  } else {
+    result.pass.forEach((name) => lines.push(formatLine(name)));
+  }
+  lines.push('');
+
+  lines.push('❌ 벌칙');
+  if (result.fail.length === 0) {
+    lines.push('- (없음)');
+  } else {
+    result.fail.forEach((name) => lines.push(formatLine(name)));
+  }
+  lines.push('');
+
+  const totalCount = Object.values(result.counts).reduce((a, b) => a + b, 0);
+  lines.push('📑 합계');
+  lines.push(`총 풀이: ${totalCount}문제`);
+
+  return lines.join('\n');
+}
+
+/**
+ * Discord Webhook용 payload 객체를 만듭니다. content만 사용합니다.
+ * @param {Object} result - main에서 만든 최종 결과
+ * @param {Object} members - rules.members
+ * @returns {{ content: string }}
+ */
+function buildDiscordPayload(result, members) {
+  return {
+    content: buildDiscordMessage(result, members),
+  };
 }
