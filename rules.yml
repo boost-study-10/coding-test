@@ -1,0 +1,61 @@
+# 주간 코딩테스트 집계 규칙
+# 멤버별 목표는 이 파일만 수정하면 됨 (코드 수정 불필요)
+#
+# 목표 유형 (type)
+#   weekly_count  - 주간 풀이 개수 (target: N문제 이상)
+#   weekly_days   - 주간 풀이 일수 (target: N일 이상, 그날 1문제 이상이면 1일로 인정)
+#   daily         - 매일 풀기 (weekly_days, target: 7 과 동일)
+#
+# 제외: active: false 로 두면 집계/판정에서 제외됨
+
+members:
+  ahyeon:
+    type: weekly_count
+    target: 3 # 일주일에 3문제 이상
+
+  ajin:
+    type: daily # 매일 문제 풀기 (주 7일 기준)
+    target: 7
+
+  aryeong:
+    type: weekly_count
+    target: 7 # 일주일에 7문제 이상 커밋
+
+  chaewon:
+    type: weekly_days
+    target: 3 # 주 3회 (1일 1~3문제)
+
+  minjeong:
+    type: weekly_days
+    target: 4 # 주 4회 이상 실전 문제 풀이
+
+  suyeon:
+    type: weekly_count
+    target: 10 # 주 10문제 목표
+
+  gyuri:
+    active: false # 임시 제외
+
+  seoyeon:
+    active: false # 임시 제외
+
+# README 플랫폼 태그 통일 기준 (태그 → 플랫폼명)
+platforms:
+  BOJ: 백준
+  PGS: 프로그래머스
+  LTC: 리트코드
+  CFS: 코드포스
+  SEA: 삼성 SW Expert Academy
+  ETC: 기타
+
+file_patterns:
+  - BOJ_*.md
+  - PGS_*.md
+  - LTC_*.md
+  - CFS_*.md
+  - SEA_*.md
+  - ETC_*.md
+
+week:
+  start: monday
+  end: sunday

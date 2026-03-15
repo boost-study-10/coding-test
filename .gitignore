@@ -7,3 +7,12 @@
 logs
 *.log
 .vscode/*
+
+# evaluate 스크립트 실행 시 생성, Webhook 전송용(커밋 불필요)
+reports/discord-payload.json
+
+# 누적 주간 이력, CI 워크플로에서만 커밋·갱신 (로컬에선 무시)
+reports/history.json
+
+# 누적 현황판, CI 워크플로에서만 커밋·갱신 (로컬에선 무시)
+leaderboard.md
