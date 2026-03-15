@@ -7,3 +7,6 @@
 logs
 *.log
 .vscode/*
+
+# evaluate 스크립트 실행 시 생성, Webhook 전송용(커밋 불필요)
+reports/discord-payload.json
