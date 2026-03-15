@@ -13,3 +13,6 @@ reports/discord-payload.json
 
 # 누적 주간 이력, CI 워크플로에서만 커밋·갱신 (로컬에선 무시)
 reports/history.json
+
+# 누적 현황판, CI 워크플로에서만 커밋·갱신 (로컬에선 무시)
+leaderboard.md
