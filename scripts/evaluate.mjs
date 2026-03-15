@@ -55,6 +55,12 @@ const GIT_CONFIG = {
 const GIT_EXIT_NO_LOG = 1;
 const GIT_EXIT_NOT_REPO = 128;
 
+/** 누적 현황판: history 저장 경로, leaderboard에 표시할 최근 주 수 */
+const HISTORY_PATH = join(REPO_ROOT, 'reports', 'history.json');
+const LEADERBOARD_RECENT_WEEKS = 10;
+/** 미달 1주당 벌금 (원) */
+const PENALTY_PER_FAIL_WON = 2000;
+
 /**
  * 스크립트 실행 흐름
  *   1. 규칙 로드
@@ -73,12 +79,28 @@ function main() {
   const result = { ...aggregated, pass, fail };
   console.log(JSON.stringify(result, null, 2));
 
+  const history = loadHistory();
+  const updatedHistory = updateHistoryWithWeek(
+    history,
+    weekStart,
+    weekEnd,
+    result.pass,
+    result.fail,
+  );
+  saveHistory(updatedHistory);
+
+  const memberStats = computeMemberStats(updatedHistory);
+  const leaderboardMd = buildLeaderboardMarkdown(updatedHistory, memberStats);
+  writeFileSync(join(REPO_ROOT, 'leaderboard.md'), leaderboardMd, 'utf8');
+
+  const reportsDir = join(REPO_ROOT, 'reports');
+  mkdirSync(reportsDir, { recursive: true });
+  const leaderboardUrl = getLeaderboardUrl();
   const payload = buildDiscordPayload(result, rules.members, {
     weekStart,
     weekEnd,
+    leaderboardUrl,
   });
-  const reportsDir = join(REPO_ROOT, 'reports');
-  mkdirSync(reportsDir, { recursive: true });
   writeFileSync(
     join(reportsDir, 'discord-payload.json'),
     JSON.stringify(payload, null, 2),
@@ -440,7 +462,7 @@ function evaluatePassFail(aggregated, members) {
  * 집계·판정 결과와 members 설정으로 Discord 메시지 본문을 만듭니다.
  * @param {{ counts: Object, days: Object, pass: string[], fail: string[] }} result - main에서 만든 최종 결과
  * @param {Object} members - rules.members
- * @param {{ weekStart: string, weekEnd: string }} [weekRange] - 표시용 주간 기간 (YYYY-MM-DD)
+ * @param {{ weekStart: string, weekEnd: string, leaderboardUrl?: string }} [weekRange] - 표시용 주간 기간 및 현황판 링크
  * @returns {string}
  */
 function buildDiscordMessage(result, members, weekRange) {
@@ -481,6 +503,10 @@ function buildDiscordMessage(result, members, weekRange) {
   lines.push('📑 합계');
   lines.push(`총 풀이: ${totalCount}문제`);
 
+  if (weekRange?.leaderboardUrl) {
+    lines.push('', `📊 [누적 현황 보기](${weekRange.leaderboardUrl})`);
+  }
+
   return lines.join('\n');
 }
 
@@ -488,11 +514,143 @@ function buildDiscordMessage(result, members, weekRange) {
  * Discord Webhook용 payload 객체를 만듭니다. content만 사용합니다.
  * @param {Object} result - main에서 만든 최종 결과
  * @param {Object} members - rules.members
- * @param {{ weekStart: string, weekEnd: string }} [weekRange] - 표시용 주간 기간
+ * @param {{ weekStart: string, weekEnd: string, leaderboardUrl?: string }} [weekRange] - 표시용 주간 기간 및 현황판 링크
  * @returns {{ content: string }}
  */
 function buildDiscordPayload(result, members, weekRange) {
   return {
     content: buildDiscordMessage(result, members, weekRange),
   };
+}
+
+/**
+ * reports/history.json을 읽어 누적 주간 이력을 반환합니다. 없으면 기본값.
+ * @returns {{ weeks: Array<{ weekStart: string, weekEnd: string, pass: string[], fail: string[] }>, updatedAt: string }}
+ */
+function loadHistory() {
+  try {
+    const raw = readFileSync(HISTORY_PATH, 'utf8');
+    const data = JSON.parse(raw);
+    if (Array.isArray(data.weeks)) return data;
+  } catch (_) {}
+  return { weeks: [], updatedAt: new Date().toISOString() };
+}
+
+/**
+ * history를 reports/history.json에 저장합니다.
+ * @param {{ weeks: Array, updatedAt: string }} history
+ */
+function saveHistory(history) {
+  mkdirSync(dirname(HISTORY_PATH), { recursive: true });
+  history.updatedAt = new Date().toISOString();
+  writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2), 'utf8');
+}
+
+/**
+ * 이번 주 결과를 history에 반영합니다. 같은 weekStart가 있으면 덮어씁니다.
+ * @param {Object} history - loadHistory() 결과
+ * @param {string} weekStart - YYYY-MM-DD
+ * @param {string} weekEnd - YYYY-MM-DD
+ * @param {string[]} pass
+ * @param {string[]} fail
+ */
+function updateHistoryWithWeek(history, weekStart, weekEnd, pass, fail) {
+  const weeks = [...(history.weeks || [])];
+  const idx = weeks.findIndex((w) => w.weekStart === weekStart);
+  const entry = { weekStart, weekEnd, pass: [...pass], fail: [...fail] };
+  if (idx >= 0) weeks[idx] = entry;
+  else weeks.push(entry);
+  weeks.sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  const maxWeeks = 52;
+  const trimmed = weeks.length > maxWeeks ? weeks.slice(-maxWeeks) : weeks;
+  return { ...history, weeks: trimmed };
+}
+
+/**
+ * history에서 멤버별 미달 횟수·누적 벌금을 계산합니다. 미달 1주당 PENALTY_PER_FAIL_WON원.
+ * @param {{ weeks: Array<{ fail: string[] }> }} history
+ * @returns {Object<string, { failCount: number, penaltyTotal: number }>}
+ */
+function computeMemberStats(history) {
+  const stats = {};
+  for (const w of history.weeks || []) {
+    for (const name of w.fail || []) {
+      if (!stats[name]) stats[name] = { failCount: 0, penaltyTotal: 0 };
+      stats[name].failCount += 1;
+      stats[name].penaltyTotal += PENALTY_PER_FAIL_WON;
+    }
+  }
+  return stats;
+}
+
+/**
+ * leaderboard.md 본문을 생성합니다.
+ * @param {{ weeks: Array }} history
+ * @param {Object} memberStats - computeMemberStats 결과
+ * @returns {string}
+ */
+function buildLeaderboardMarkdown(history, memberStats) {
+  const lines = [
+    '# 📊 스터디 벌칙/벌금 누적 현황',
+    '',
+    '> evaluate 스크립트 실행 시 자동 갱신',
+    '',
+  ];
+
+  const allMembers = new Set();
+  for (const w of history.weeks || []) {
+    (w.pass || []).forEach((m) => allMembers.add(m));
+    (w.fail || []).forEach((m) => allMembers.add(m));
+  }
+  const sortedMembers = [...allMembers].sort();
+
+  lines.push('## 멤버별 통계', '');
+  lines.push('| 멤버 | 미달 횟수 | 누적 벌금 |');
+  lines.push('| --- | ---: | ---: |');
+  for (const name of sortedMembers) {
+    const s = memberStats[name] || { failCount: 0, penaltyTotal: 0 };
+    const penaltyStr = s.penaltyTotal > 0 ? `${s.penaltyTotal.toLocaleString()}원` : '0원';
+    lines.push(`| ${name} | ${s.failCount} | ${penaltyStr} |`);
+  }
+  lines.push('');
+
+  lines.push('## 최근 주간 결과', '');
+  const recent = (history.weeks || [])
+    .slice(-LEADERBOARD_RECENT_WEEKS)
+    .reverse();
+  for (const w of recent) {
+    lines.push(`### ${w.weekStart} ~ ${w.weekEnd}`, '');
+    lines.push(
+      '- **통과:** ' + (w.pass?.length ? w.pass.join(', ') : '(없음)'),
+    );
+    lines.push(
+      '- **벌칙:** ' + (w.fail?.length ? w.fail.join(', ') : '(없음)'),
+    );
+    lines.push('');
+  }
+
+  const updated = history.updatedAt
+    ? new Date(history.updatedAt).toISOString().slice(0, 19)
+    : '-';
+  lines.push('---', '', `*마지막 갱신: ${updated}*`);
+  return lines.join('\n');
+}
+
+/**
+ * GitHub 저장소 leaderboard.md 링크를 반환합니다. 환경 변수 없으면 빈 문자열.
+ * @returns {string}
+ */
+function getLeaderboardUrl() {
+  const repoUrl = process.env.REPO_URL;
+  if (repoUrl) {
+    const base = repoUrl.replace(/\.git$/, '');
+    return `${base}/blob/HEAD/leaderboard.md`;
+  }
+  const server = process.env.GITHUB_SERVER_URL;
+  const repo = process.env.GITHUB_REPOSITORY;
+  const ref = process.env.GITHUB_REF_NAME || 'main';
+  if (server && repo) {
+    return `${server}/${repo}/blob/${ref}/leaderboard.md`;
+  }
+  return '';
 }

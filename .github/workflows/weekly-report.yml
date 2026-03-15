@@ -12,6 +12,8 @@ on:
 jobs:
   report:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,3 +40,11 @@ jobs:
           else
             echo "DISCORD_WEBHOOK_URL secret not set, skipping Discord notification."
           fi
+
+      - name: Commit leaderboard & history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add leaderboard.md reports/history.json
+          git diff --staged --quiet || git commit -m "chore: update leaderboard and history [skip ci]"
+          git push
