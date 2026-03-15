@@ -65,7 +65,7 @@ const GIT_EXIT_NOT_REPO = 128;
  */
 function main() {
   const rules = loadRules();
-  const { since, until } = getLastWeekRange();
+  const { since, until, weekStart, weekEnd } = getLastWeekRange();
   const entries = getFilesAddedInLastWeek(since, until);
   const aggregated = aggregate(entries, rules);
   const { pass, fail } = evaluatePassFail(aggregated, rules.members);
@@ -73,7 +73,10 @@ function main() {
   const result = { ...aggregated, pass, fail };
   console.log(JSON.stringify(result, null, 2));
 
-  const payload = buildDiscordPayload(result, rules.members);
+  const payload = buildDiscordPayload(result, rules.members, {
+    weekStart,
+    weekEnd,
+  });
   const reportsDir = join(REPO_ROOT, 'reports');
   mkdirSync(reportsDir, { recursive: true });
   writeFileSync(
@@ -206,9 +209,14 @@ function getLastWeekRange() {
   const lastMonday = getStartOfLastMonday(kstNow);
   const lastSunday = getEndOfLastSunday(lastMonday);
 
+  const formatYMD = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
   return {
     since: lastMonday.toISOString().replace('.000', ''),
     until: lastSunday.toISOString().replace('.000', ''),
+    weekStart: formatYMD(lastMonday),
+    weekEnd: formatYMD(lastSunday),
   };
 }
 
@@ -432,10 +440,15 @@ function evaluatePassFail(aggregated, members) {
  * 집계·판정 결과와 members 설정으로 Discord 메시지 본문을 만듭니다.
  * @param {{ counts: Object, days: Object, pass: string[], fail: string[] }} result - main에서 만든 최종 결과
  * @param {Object} members - rules.members
+ * @param {{ weekStart: string, weekEnd: string }} [weekRange] - 표시용 주간 기간 (YYYY-MM-DD)
  * @returns {string}
  */
-function buildDiscordMessage(result, members) {
+function buildDiscordMessage(result, members, weekRange) {
   const lines = ['📌 코딩테스트 스터디 주간 결과', ''];
+
+  if (weekRange) {
+    lines.push(`${weekRange.weekStart} ~ ${weekRange.weekEnd}`, '');
+  }
 
   const formatLine = (name) => {
     const config = members[name];
@@ -475,10 +488,11 @@ function buildDiscordMessage(result, members) {
  * Discord Webhook용 payload 객체를 만듭니다. content만 사용합니다.
  * @param {Object} result - main에서 만든 최종 결과
  * @param {Object} members - rules.members
+ * @param {{ weekStart: string, weekEnd: string }} [weekRange] - 표시용 주간 기간
  * @returns {{ content: string }}
  */
-function buildDiscordPayload(result, members) {
+function buildDiscordPayload(result, members, weekRange) {
   return {
-    content: buildDiscordMessage(result, members),
+    content: buildDiscordMessage(result, members, weekRange),
   };
 }
