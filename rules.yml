@@ -31,7 +31,7 @@ members:
 
   suyeon:
     type: weekly_count
-    target: 6 # 주 10문제 목표
+    target: 6 # 주 6문제 목표 (알고리즘 5문제 + sql 파일 1개)
 
   gyuri:
     active: false # 임시 제외
