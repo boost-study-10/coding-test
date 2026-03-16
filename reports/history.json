@@ -13,7 +13,21 @@
         "minjeong",
         "suyeon"
       ]
+    },
+    {
+      "weekStart": "2026-03-09",
+      "weekEnd": "2026-03-15",
+      "pass": [
+        "ahyeon",
+        "aryeong"
+      ],
+      "fail": [
+        "ajin",
+        "chaewon",
+        "minjeong",
+        "suyeon"
+      ]
     }
   ],
-  "updatedAt": "2026-03-15T14:49:48.298Z"
+  "updatedAt": "2026-03-16T01:59:53.551Z"
 }
