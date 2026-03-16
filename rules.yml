@@ -31,7 +31,7 @@ members:
 
   suyeon:
     type: weekly_count
-    target: 10 # 주 10문제 목표
+    target: 6 # 주 10문제 목표
 
   gyuri:
     active: false # 임시 제외
