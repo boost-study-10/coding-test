@@ -1,0 +1,60 @@
+### 대장균들의 자식의 수 구하기
+#### 스칼라 서브쿼리 방식
+```sql
+SELECT ID,
+       (SELECT COUNT(*)
+        FROM ECOLI_DATA
+        WHERE A.ID = PARENT_ID) AS CHILD_COUNT
+FROM ECOLI_DATA A
+ORDER BY ID;
+```
+#### LEFT JOIN 방식
+```sql
+SELECT A.ID, COUNT(B.ID) AS CHILD_COUNT
+FROM ECOLI_DATA A LEFT OUTER JOIN ECOLI_DATA B
+ON A.ID = B.PARENT_ID
+GROUP BY A.ID
+ORDER BY A.ID;
+```
+
+### 특정 형질을 가지는 대장균 찾기
+```sql
+SELECT COUNT(ID) AS COUNT
+FROM ECOLI_DATA
+WHERE (GENOTYPE & 2 = 0) AND (GENOTYPE & (1 | 4) > 0);
+```
+
+### 부모의 형질을 모두 가지는 대장균 찾기
+```sql
+SELECT B.ID, B.GENOTYPE, A.GENOTYPE AS PARENT_GENOTYPE
+FROM ECOLI_DATA A JOIN ECOLI_DATA B
+ON A.ID = B.PARENT_ID
+WHERE (B.GENOTYPE & A.GENOTYPE) = A.GENOTYPE
+ORDER BY ID;
+```
+
+### 대장균의 크기에 따라 분류하기 1
+```sql
+SELECT ID, (CASE
+                WHEN SIZE_OF_COLONY <= 100 THEN 'LOW'
+                WHEN SIZE_OF_COLONY <= 1000 THEN 'MEDIUM'
+                ELSE 'HIGH'
+            END) AS SIZE
+FROM ECOLI_DATA
+ORDER BY ID;
+```
+
+### 대장균의 크기에 따라 분류하기 2
+```sql
+SELECT ID, (CASE
+                WHEN TILE = 1 THEN 'CRITICAL'
+                WHEN TILE = 2 THEN 'HIGH'
+                WHEN TILE = 3 THEN 'MEDIUM'
+                ELSE 'LOW'
+            END) AS COLONY_NAME
+FROM (SELECT ID,
+             NTILE(4) OVER (ORDER BY SIZE_OF_COLONY DESC) AS TILE
+     FROM ECOLI_DATA
+     ) AS T
+ORDER BY ID;
+```
