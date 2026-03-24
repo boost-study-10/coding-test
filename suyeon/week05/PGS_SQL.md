@@ -1,0 +1,110 @@
+### 가장 비싼 상품 구하기
+```sql
+SELECT MAX(PRICE) AS MAX_PRICE
+FROM PRODUCT;
+```
+
+### 가격이 제일 비싼 식품의 정보 출력하기
+-- 공동1등도 전부 다 출력
+```sql
+SELECT PRODUCT_ID, PRODUCT_NAME, PRODUCT_CD, CATEGORY, PRICE
+FROM FOOD_PRODUCT
+WHERE PRICE = (SELECT MAX(PRICE) FROM FOOD_PRODUCT);
+```
+-- 공동 1등이 여러 명이어도 무조건 맨 위의 한 명만 보여줌
+-- 데이터가 아주 많을 때 (인덱스가 걸려 있다면) 찾자마자 멈추기 때문에 성능상 미세하게 유리함
+```sql
+SELECT PRODUCT_ID, PRODUCT_NAME, PRODUCT_CD, CATEGORY, PRICE
+FROM FOOD_PRODUCT
+WHERE PRICE = (SELECT MAX(PRICE) FROM FOOD_PRODUCT);
+```
+
+### 최댓값 구하기
+```sql
+SELECT MAX(DATETIME)
+FROM ANIMAL_INS;
+```
+
+### 최솟값 구하기
+```sql
+SELECT MIN(DATETIME)
+FROM ANIMAL_INS;
+```
+
+### 동물 수 구하기
+```sql
+SELECT COUNT(ANIMAL_ID)
+FROM ANIMAL_INS;
+```
+
+### 중복 제거하기
+```sql
+SELECT COUNT(DISTINCT NAME) AS count
+FROM ANIMAL_INS;
+```
+
+### 조건에 맞는 아이템들의 가격의 총합 구하기
+```sql
+SELECT SUM(PRICE) AS TOTAL_PRICE
+FROM ITEM_INFO
+WHERE RARITY = 'LEGEND';
+```
+
+### 물고기 종류 별 대어 찾기
+-- 서브쿼리
+```sql
+SELECT A.ID, B.FISH_NAME, A.LENGTH
+FROM FISH_INFO A INNER JOIN FISH_NAME_INFO B
+ON A.FISH_TYPE = B.FISH_TYPE
+WHERE (A.FISH_TYPE, A.LENGTH) IN (
+                            SELECT S.FISH_TYPE, MAX(S.LENGTH)
+                            FROM FISH_INFO S
+                            GROUP BY S.FISH_TYPE)
+ORDER BY A.ID;
+```
+-- 윈도우함수
+```sql
+SELECT T.ID, T.FISH_NAME, T.LENGTH
+FROM (
+    SELECT A.ID, B.FISH_NAME, A.LENGTH,
+        RANK() OVER (PARTITION BY A.FISH_TYPE ORDER BY A.LENGTH DESC) AS rk
+    FROM FISH_INFO A INNER JOIN FISH_NAME_INFO B
+    ON A.FISH_TYPE = B.FISH_TYPE
+) AS T
+WHERE T.rk = 1
+ORDER BY ID;
+```
+
+### 잡은 물고기 중 가장 큰 물고기의 길이 구하기
+```sql
+SELECT CONCAT(MAX(LENGTH), 'cm') AS MAX_LENGTH
+FROM FISH_INFO;
+```
+
+### 연도별 대장균 크기의 편차 구하기 
+-- 서브쿼리
+```sql
+SELECT
+    YEAR(A.DIFFERENTIATION_DATE) AS YEAR,
+    (B.max_size - A.SIZE_OF_COLONY) AS YEAR_DEV,
+    A.ID
+FROM ECOLI_DATA A
+JOIN (
+    SELECT
+        YEAR(DIFFERENTIATION_DATE) AS year,
+        MAX(SIZE_OF_COLONY) AS max_size
+    FROM ECOLI_DATA
+    GROUP BY YEAR(DIFFERENTIATION_DATE)
+) AS B
+ON YEAR(A.DIFFERENTIATION_DATE) = B.year
+ORDER BY YEAR, YEAR_DEV;
+```
+-- 윈도우함수
+```sql
+SELECT
+    YEAR(DIFFERENTIATION_DATE) AS YEAR,
+    MAX(SIZE_OF_COLONY) OVER (PARTITION BY YEAR(DIFFERENTIATION_DATE)) - SIZE_OF_COLONY AS YEAR_DEV,
+    ID
+FROM ECOLI_DATA
+ORDER BY YEAR, YEAR_DEV;
+```
