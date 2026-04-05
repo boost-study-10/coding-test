@@ -30,7 +30,7 @@ members:
     target: 4 # 주 4회 이상 실전 문제 풀이
 
   suyeon:
-    active: false
+    # active: false
     type: weekly_count
     target: 6 # 주 6문제 목표 (알고리즘 5문제 + sql 파일 1개)
 
