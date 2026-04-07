@@ -22,8 +22,9 @@ members:
     target: 7 # 일주일에 7문제 이상 커밋
 
   chaewon:
+    active: false # 4월 한 달간 쉬어 감. 가능하면 중간에 업데이트
     type: weekly_days
-    target: 3 # 주 3회 (1일 1~3문제)
+    target: 0 # 주 3회 (1일 1~3문제) 
 
   minjeong:
     type: weekly_days
