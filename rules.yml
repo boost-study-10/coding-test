@@ -29,9 +29,9 @@ members:
     active: false # 4월 한 달간 쉬어 감
 
   suyeon:
-    active: false
+    active: true
     type: weekly_count
-    target: 6 # 주 6문제 목표 (알고리즘 5문제 + sql 파일 1개)
+    target: 4 # 주 4문제 목표
 
   gyuri:
     active: false # 임시 제외
