@@ -29,7 +29,7 @@ members:
     active: false # 4월 한 달간 쉬어 감
 
   suyeon:
-    active: true
+    active: false
     type: weekly_count
     target: 4 # 주 4문제 목표
 
